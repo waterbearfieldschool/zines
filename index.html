@@ -283,7 +283,8 @@
   </ul>
   <h3>Printing</h3>
   <p>Print at <strong>100% scale</strong> (not "fit to page"), single-sided, with margins set to <em>None</em> or <em>Minimum</em>. Most printers can't print to the very edge, so keep important content a little away from page edges.</p>
-  <p><strong>Want a PDF?</strong> Use the same 🖨 button and choose <em>Save as PDF</em> as the destination in the print dialog — you'll get a perfect vector PDF of the sheet.</p>
+  <p><strong>Want a PDF?</strong> Use the same 🖨 button and choose <em>Save as PDF</em> as the destination in the print dialog — you'll get a perfect vector PDF of the sheet. When printing that PDF later, choose <em>Actual size</em>, never <em>Fit</em>.</p>
+  <p><strong>Why 100% matters:</strong> the folds are made by halving the physical paper, and the layout is anchored to those exact fractions of the sheet — so at 100% scale the fold lines are automatically registered to the paper, and printers that can't reach the edges merely trim the outer few millimeters without shifting anything. Any "fit / shrink to page" setting scales the layout and breaks that registration. <em>Quick check:</em> fold a printed sheet in half — the crease should run right along the printed fold line. If it doesn't, your print was scaled.</p>
   <h3>Folding (after printing)</h3>
   <div class="foldsteps">
     <figure>
