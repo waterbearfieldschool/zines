@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zine Studio — 8-page mini-zine maker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>">
+<style>
+  :root { --bg:#efece4; --ink:#232323; --accent:#e5533d; --line:#232323; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { font-family:system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+
+  /* ---------- top bar ---------- */
+  header {
+    position:sticky; top:0; z-index:40; display:flex; flex-wrap:wrap; align-items:center;
+    gap:8px; padding:8px 14px; background:#fff; border-bottom:2px solid var(--line);
+  }
+  header h1 { font-size:17px; margin:0 8px 0 0; letter-spacing:.5px; }
+  header h1 span { color:var(--accent); }
+  .btn {
+    font:inherit; font-size:13px; padding:5px 10px; border:1.5px solid var(--line);
+    background:#fff; border-radius:6px; cursor:pointer; color:var(--ink);
+  }
+  .btn:hover { background:#f5f1e8; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.primary:hover { background:#c94430; }
+  .btn[disabled] { opacity:.4; cursor:default; }
+  header label.ctl { font-size:12px; display:flex; align-items:center; gap:5px; }
+  .spacer { flex:1; }
+
+  /* ---------- contextual toolbar ---------- */
+  #ctxbar {
+    position:sticky; top:49px; z-index:39; display:flex; flex-wrap:wrap; align-items:center;
+    gap:8px; padding:6px 14px; background:#faf8f2; border-bottom:1px solid #d8d2c2;
+    min-height:38px; font-size:13px;
+  }
+  #ctxbar .hint { color:#8a8272; font-size:12px; }
+  #ctxbar select, #ctxbar input[type=number] {
+    font:inherit; font-size:13px; padding:3px 4px; border:1px solid #bbb; border-radius:4px;
+  }
+  #ctxbar input[type=number] { width:56px; }
+  #ctxbar input[type=color] { width:26px; height:26px; padding:1px; border:1px solid #bbb; border-radius:4px; background:#fff; cursor:pointer; }
+  .tbtn {
+    font:inherit; font-size:13px; min-width:28px; padding:4px 7px; border:1px solid #bbb;
+    background:#fff; border-radius:4px; cursor:pointer;
+  }
+  .tbtn.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .tgroup { display:flex; gap:3px; align-items:center; }
+  .tsep { width:1px; height:22px; background:#d8d2c2; }
+  .tlabel { font-size:11px; color:#8a8272; }
+
+  /* ---------- pages grid ---------- */
+  #pages { display:flex; flex-wrap:wrap; gap:10px 26px; padding:22px; justify-content:center; }
+  .pagewrap { display:flex; flex-direction:column; }
+  .pagehead { display:flex; align-items:center; gap:6px; font-size:11.5px; color:#6d6555; padding:2px 1px 4px; }
+  .pagehead .pglabel { flex:1; font-weight:600; }
+  .pagehead .mini {
+    font-size:11px; padding:1px 6px; border:1px solid #c4bda9; background:#fff;
+    border-radius:4px; cursor:pointer; color:#555;
+  }
+  .pagehead .mini:hover { background:#f0ece0; }
+  .pagehead input[type=color] { width:20px; height:20px; padding:0; border:1px solid #c4bda9; border-radius:4px; background:#fff; cursor:pointer; }
+  .page {
+    position:relative; background:#fff; overflow:hidden; user-select:none;
+    box-shadow:0 2px 10px rgba(60,50,20,.22); outline:1px solid #d5cfc0;
+  }
+  .page.dropping { outline:3px dashed var(--accent); }
+
+  /* ---------- elements ---------- */
+  .el { position:absolute; cursor:grab; touch-action:none; }
+  .el:active { cursor:grabbing; }
+  .el .content { pointer-events:none; }
+  .el.text .content { width:100%; min-height:100%; white-space:pre-wrap; word-wrap:break-word; line-height:1.25; pointer-events:auto; }
+  .el.image .content { width:100%; height:100%; }
+  .el.image img { width:100%; height:100%; object-fit:fill; display:block; pointer-events:none; }
+  .el.selected { outline:1.5px solid var(--accent); }
+  .el .content[contenteditable="true"] { user-select:text; cursor:text; outline:1px dashed var(--accent); }
+
+  .handle {
+    position:absolute; width:12px; height:12px; background:#fff; border:1.5px solid var(--accent);
+    border-radius:50%; z-index:6; touch-action:none;
+  }
+  .h-nw { left:-6px; top:-6px; cursor:nwse-resize; }
+  .h-n  { left:calc(50% - 6px); top:-6px; cursor:ns-resize; }
+  .h-ne { right:-6px; top:-6px; cursor:nesw-resize; }
+  .h-e  { right:-6px; top:calc(50% - 6px); cursor:ew-resize; }
+  .h-se { right:-6px; bottom:-6px; cursor:nwse-resize; }
+  .h-s  { left:calc(50% - 6px); bottom:-6px; cursor:ns-resize; }
+  .h-sw { left:-6px; bottom:-6px; cursor:nesw-resize; }
+  .h-w  { left:-6px; top:calc(50% - 6px); cursor:ew-resize; }
+  .h-rot { left:calc(50% - 6px); top:-30px; cursor:grab; background:var(--accent); }
+
+  /* ---------- flip-through book preview ---------- */
+  #flip-wrap { display:none; position:fixed; inset:0; z-index:110; background:rgba(28,24,14,.82); }
+  #flip-wrap.show { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+  #flip-bar { display:flex; align-items:center; gap:12px; color:#f3efe4; font-size:14px; }
+  #flip-bar .btn { background:#fff; }
+  #flip-label { min-width:110px; text-align:center; font-weight:600; letter-spacing:.4px; }
+  #book { position:relative; perspective:2400px; }
+  .leaf {
+    position:absolute; top:0; right:0; width:50%; height:100%;
+    transform-style:preserve-3d; transform-origin:left center;
+    transition:transform .75s cubic-bezier(.45,.1,.2,1);
+    cursor:pointer;
+  }
+  .leaf.flipped { transform:rotateY(-180deg); }
+  .leaf .face {
+    position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    overflow:hidden; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.12);
+  }
+  .leaf .face.back { transform:rotateY(180deg); }
+  .leaf .sheen { position:absolute; inset:0; pointer-events:none; }
+  .leaf .face.front .sheen { background:linear-gradient(to right, rgba(0,0,0,.14), rgba(0,0,0,0) 12%); }
+  .leaf .face.back .sheen { background:linear-gradient(to left, rgba(0,0,0,.14), rgba(0,0,0,0) 12%); }
+  #flip-hint { color:#bdb49c; font-size:12.5px; }
+
+  /* ---------- print sheet / preview ---------- */
+  #sheet-wrap { display:none; position:fixed; inset:0; z-index:100; background:rgba(30,25,15,.6); overflow:auto; padding:18px; }
+  #sheet-wrap.show { display:block; }
+  #sheet-note {
+    max-width:900px; margin:0 auto 12px; background:#fff; border-radius:8px; padding:10px 14px;
+    font-size:13px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  #sheet-note .spacer { flex:1; }
+  #sheet { position:relative; width:11in; height:8.5in; background:#fff; margin:0 auto; box-shadow:0 4px 24px rgba(0,0,0,.4); }
+  .panel { position:absolute; width:2.75in; height:4.25in; overflow:hidden; }
+  .panel.flip { transform:rotate(180deg); }
+  .guide { position:absolute; pointer-events:none; }
+
+  @media print {
+    header, #ctxbar, #pages, #flip-wrap, dialog { display:none !important; }
+    #sheet-wrap { display:block !important; position:static !important; background:none !important; padding:0 !important; overflow:visible !important; }
+    #sheet-note { display:none !important; }
+    #sheet { zoom:1 !important; margin:0 !important; box-shadow:none !important; }
+    html, body { background:#fff !important; }
+  }
+  @page { size:letter landscape; margin:0; }
+
+  /* ---------- help dialog ---------- */
+  dialog {
+    border:2px solid var(--line); border-radius:10px; padding:22px 26px; max-width:640px;
+    font-size:14px; line-height:1.5;
+  }
+  dialog::backdrop { background:rgba(30,25,15,.5); }
+  dialog h2 { margin-top:0; }
+  dialog h3 { margin-bottom:4px; }
+  dialog ol { padding-left:20px; margin:6px 0; }
+  dialog kbd { background:#eee; border:1px solid #ccc; border-radius:3px; padding:0 5px; font-size:12px; }
+  dialog table { border-collapse:collapse; }
+  dialog td { padding:2px 12px 2px 0; }
+
+  #toast {
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:200;
+    background:var(--ink); color:#fff; padding:8px 16px; border-radius:8px; font-size:13px;
+    opacity:0; transition:opacity .3s; pointer-events:none; max-width:80vw;
+  }
+  #toast.show { opacity:1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ZINE <span>STUDIO</span></h1>
+  <button class="btn" id="b-new" title="Start over">New</button>
+  <button class="btn" id="b-import">Open…</button>
+  <button class="btn" id="b-export" title="Download your zine as a .json file">Save file</button>
+  <span class="tsep"></span>
+  <button class="btn" id="b-undo" title="Ctrl+Z">↩ Undo</button>
+  <button class="btn" id="b-redo" title="Ctrl+Shift+Z">↪ Redo</button>
+  <span class="tsep"></span>
+  <label class="ctl">Zoom <input type="range" id="zoom" min="50" max="170" step="2"></label>
+  <label class="ctl"><input type="checkbox" id="guides"> fold guides</label>
+  <span class="spacer"></span>
+  <button class="btn" id="b-flip">📖 Flip through</button>
+  <button class="btn" id="b-preview">Preview sheet</button>
+  <button class="btn primary" id="b-print">🖨 Print</button>
+  <button class="btn" id="b-help">?</button>
+</header>
+
+<div id="ctxbar"></div>
+<main id="pages"></main>
+
+<div id="flip-wrap">
+  <div id="flip-bar">
+    <button class="btn" id="flip-prev">‹ back</button>
+    <span id="flip-label"></span>
+    <button class="btn" id="flip-next">turn ›</button>
+    <button class="btn" id="flip-close">✕ Close</button>
+  </div>
+  <div id="book"></div>
+  <div id="flip-hint">Click the pages to turn them, or use ← → arrow keys</div>
+</div>
+
+<div id="sheet-wrap">
+  <div id="sheet-note">
+    <strong>Print preview</strong> — one landscape US-letter sheet, single-sided. Fold + one cut = your zine.
+    <span class="spacer"></span>
+    <button class="btn primary" id="b-print2">🖨 Print</button>
+    <button class="btn" id="b-close-preview">✕ Close</button>
+  </div>
+  <div id="sheet"></div>
+</div>
+
+<dialog id="help">
+  <h2>✂️ Zine Studio</h2>
+  <p>Make an 8-page mini-zine from a single sheet of 8.5×11 paper — printed on <strong>one side only</strong>, folded, with one small cut. Each page is 2.75″ × 4.25″.</p>
+  <h3>Editing</h3>
+  <ul style="padding-left:20px;margin:6px 0">
+    <li><strong>+ text / + image</strong> buttons above each page add elements; you can also <strong>drag &amp; drop</strong> image files onto a page, or paste a copied image with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
+    <li>Click an element to select it, drag to move, use the round handles to resize, and the red handle above to rotate (hold <kbd>Shift</kbd> for free rotation).</li>
+    <li><strong>Double-click text to edit it.</strong> Fonts, size, color and alignment appear in the toolbar when selected.</li>
+    <li>Work is autosaved in your browser. Use <em>Save file</em> to keep a portable copy.</li>
+    <li><strong>📖 Flip through</strong> shows an animated preview of the finished booklet — click pages to turn them.</li>
+  </ul>
+  <h3>Printing</h3>
+  <p>Print at <strong>100% scale</strong> (not "fit to page"), single-sided, with margins set to <em>None</em> or <em>Minimum</em>. Most printers can't print to the very edge, so keep important content a little away from page edges.</p>
+  <h3>Folding (after printing)</h3>
+  <ol>
+    <li>Fold in half — long edge to long edge ("hot-dog"). Unfold.</li>
+    <li>Fold in half short-edge to short-edge, then fold each half back to the middle, making 8 panels. Unfold everything.</li>
+    <li>Fold in half short-edge to short-edge and cut along the center crease from the folded edge to the middle of the sheet — the slit should span only the middle two panels. (The fold guides mark it with ✂.)</li>
+    <li>Unfold, then refold hot-dog with the printing on the <em>outside</em>.</li>
+    <li>Push the two ends toward the middle — the slit opens into a diamond and the panels form a plus-sign. Wrap them flat into a booklet with the cover on front. Crease well!</li>
+  </ol>
+  <h3>Shortcuts</h3>
+  <table>
+    <tr><td><kbd>Delete</kbd></td><td>delete selected</td><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td><td>duplicate</td></tr>
+    <tr><td>Arrow keys</td><td>nudge (Shift = more)</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>undo</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>X</kbd></td><td>copy / cut element</td><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>paste onto the page under your mouse (elements or images)</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>deselect</td><td></td><td></td></tr>
+  </table>
+  <p style="text-align:right;margin-bottom:0"><button class="btn primary" id="b-close-help">Let's make a zine</button></p>
+</dialog>
+
+<div id="toast"></div>
+<input type="file" id="imgfile" accept="image/*" multiple hidden>
+<input type="file" id="jsonfile" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+
+/* ================= constants & state ================= */
+
+const PW = 2.75, PH = 4.25;               // page size in inches
+const SHEET_TOP = [5, 4, 3, 2];           // page numbers, top row of sheet (printed rotated 180°)
+const SHEET_BOT = [6, 7, 8, 1];           // bottom row; 1 = front cover, 8 = back cover
+const LABELS = ['1 · front cover', '2', '3', '4', '5', '6', '7', '8 · back cover'];
+const FONTS = [
+  ['Sans',       'Helvetica, Arial, sans-serif'],
+  ['Serif',      'Georgia, "Times New Roman", serif'],
+  ['Typewriter', '"Courier New", Courier, monospace'],
+  ['Marker',     '"Comic Sans MS", "Chalkboard SE", cursive'],
+  ['Display',    'Impact, "Arial Black", sans-serif'],
+  ['Script',     '"Brush Script MT", "Segoe Script", cursive'],
+];
+const STORE_KEY = 'zine-studio-doc';
+
+let ppi = +(localStorage.getItem('zine-studio-zoom') || 88);
+let state = null;
+let sel = null;          // {p, id}
+let editing = null;      // id of text element being edited
+let hist = [], future = [];
+let lastHistKey = '', lastHistT = 0;
+let lastClick = { id: null, t: 0 };
+let saveTimer = null, warnedStorage = false;
+let clip = null;         // internal element clipboard (JSON string)
+let hoverPage = null;    // page index under the mouse — target for Ctrl+V
+
+const $ = s => document.querySelector(s);
+function div(cls) { const d = document.createElement('div'); if (cls) d.className = cls; return d; }
+function nid() { return 'e' + Math.random().toString(36).slice(2, 9); }
+function findEl(id) {
+  for (const pg of state.pages) { const e = pg.els.find(x => x.id === id); if (e) return e; }
+  return null;
+}
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function newDoc() {
+  const pages = Array.from({ length: 8 }, () => ({ bg: '#ffffff', els: [] }));
+  pages[0].els.push({
+    id: nid(), type: 'text', text: 'MY ZINE', x: 0.2, y: 1.45, w: 2.35, h: 0.7, r: 0,
+    font: FONTS[4][1], size: 30, color: '#232323', align: 'center', bold: true, italic: false, bg: 'none'
+  });
+  pages[0].els.push({
+    id: nid(), type: 'text', text: 'a tiny how-to booklet', x: 0.35, y: 2.2, w: 2.05, h: 0.35, r: 0,
+    font: FONTS[2][1], size: 10, color: '#666666', align: 'center', bold: false, italic: false, bg: 'none'
+  });
+  return { guides: true, pages };
+}
+
+/* ================= history & persistence ================= */
+
+function pushHist() {
+  hist.push(JSON.stringify(state));
+  if (hist.length > 100) hist.shift();
+  future.length = 0;
+}
+function pushHistGrouped(key) {  // group rapid repeats (slider drags, nudges) into one undo step
+  const now = performance.now();
+  if (key !== lastHistKey || now - lastHistT > 900) pushHist();
+  lastHistKey = key; lastHistT = now;
+}
+function undo() {
+  if (!hist.length) return;
+  commitEdit();
+  future.push(JSON.stringify(state));
+  state = JSON.parse(hist.pop());
+  sel = null; render(); saveSoon();
+}
+function redo() {
+  if (!future.length) return;
+  commitEdit();
+  hist.push(JSON.stringify(state));
+  state = JSON.parse(future.pop());
+  sel = null; render(); saveSoon();
+}
+
+function saveSoon() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+    catch (e) {
+      if (!warnedStorage) {
+        warnedStorage = true;
+        toast('⚠ Autosave failed (images too large for browser storage). Use "Save file" to keep your work!', 6000);
+      }
+    }
+  }, 400);
+}
+
+/* ================= rendering ================= */
+
+// Build an element's DOM. u(inches)->css length, fu(points)->css font-size.
+function elDom(el, u, fu) {
+  const d = div('el ' + el.type);
+  d.style.left = u(el.x); d.style.top = u(el.y);
+  d.style.width = u(el.w); d.style.height = u(el.h);
+  d.style.transform = 'rotate(' + (el.r || 0) + 'deg)';
+  const c = div('content');
+  if (el.type === 'text') {
+    c.textContent = el.text;
+    c.style.fontFamily = el.font;
+    c.style.fontSize = fu(el.size);
+    c.style.color = el.color;
+    c.style.textAlign = el.align;
+    c.style.fontWeight = el.bold ? '700' : '400';
+    c.style.fontStyle = el.italic ? 'italic' : 'normal';
+    c.style.padding = u(0.03);
+    d.style.background = (el.bg && el.bg !== 'none') ? el.bg : 'transparent';
+    c.spellcheck = false;
+  } else {
+    const img = new Image();
+    img.src = el.src; img.draggable = false;
+    c.appendChild(img);
+  }
+  d.appendChild(c);
+  return d;
+}
+
+function applyGeom(d, el) {
+  d.style.left = el.x * ppi + 'px'; d.style.top = el.y * ppi + 'px';
+  d.style.width = el.w * ppi + 'px'; d.style.height = el.h * ppi + 'px';
+  d.style.transform = 'rotate(' + (el.r || 0) + 'deg)';
+}
+
+function render() {
+  const grid = $('#pages');
+  grid.innerHTML = '';
+  const u = v => v * ppi + 'px';
+  const fu = pt => pt * ppi / 72 + 'px';
+
+  state.pages.forEach((pg, p) => {
+    const wrap = div('pagewrap');
+    const head = div('pagehead');
+    const lbl = document.createElement('span');
+    lbl.className = 'pglabel'; lbl.textContent = LABELS[p];
+    head.appendChild(lbl);
+
+    const bt = document.createElement('button');
+    bt.className = 'mini'; bt.textContent = '+ text'; bt.title = 'Add a text box';
+    bt.onclick = () => addText(p);
+    const bi = document.createElement('button');
+    bi.className = 'mini'; bi.textContent = '+ image'; bi.title = 'Add an image';
+    bi.onclick = () => { imgTarget = p; imgAt = null; $('#imgfile').click(); };
+    const bg = document.createElement('input');
+    bg.type = 'color'; bg.value = pg.bg; bg.title = 'Page background color';
+    bg.addEventListener('input', e => {
+      pushHistGrouped('bg' + p);
+      pg.bg = e.target.value;
+      wrap.querySelector('.page').style.background = pg.bg;
+      saveSoon();
+    });
+    head.append(bt, bi, bg);
+
+    const page = div('page');
+    page.style.width = u(PW); page.style.height = u(PH);
+    page.style.background = pg.bg;
+    page.dataset.p = p;
+
+    pg.els.forEach(el => {
+      const d = elDom(el, u, fu);
+      wireEl(d, p, el);
+      if (sel && sel.id === el.id) {
+        d.classList.add('selected');
+        ['nw','n','ne','e','se','s','sw','w'].forEach(h => {
+          const s = div('handle h-' + h);
+          s.addEventListener('pointerdown', ev => {
+            ev.stopPropagation(); ev.preventDefault();
+            startDrag(ev, p, el, d, 'resize', h);
+          });
+          d.appendChild(s);
+        });
+        const r = div('handle h-rot');
+        r.title = 'Drag to rotate · Shift = free';
+        r.addEventListener('pointerdown', ev => {
+          ev.stopPropagation(); ev.preventDefault();
+          startDrag(ev, p, el, d, 'rotate');
+        });
+        d.appendChild(r);
+      }
+      page.appendChild(d);
+    });
+
+    // deselect on empty click; image drag & drop
+    page.addEventListener('pointerenter', () => { hoverPage = p; });
+    page.addEventListener('pointerdown', e => { if (e.target === page) deselect(); });
+    page.addEventListener('dragover', e => { e.preventDefault(); page.classList.add('dropping'); });
+    page.addEventListener('dragleave', () => page.classList.remove('dropping'));
+    page.addEventListener('drop', e => {
+      e.preventDefault(); page.classList.remove('dropping');
+      const rect = page.getBoundingClientRect();
+      addImages(p, e.dataTransfer.files, {
+        x: (e.clientX - rect.left) / ppi,
+        y: (e.clientY - rect.top) / ppi
+      });
+    });
+
+    wrap.append(head, page);
+    grid.appendChild(wrap);
+  });
+
+  $('#guides').checked = !!state.guides;
+  renderCtx();
+}
+
+/* ================= element interaction ================= */
+
+function wireEl(d, p, el) {
+  d.dataset.id = el.id;
+  d.addEventListener('pointerdown', ev => {
+    if (editing === el.id) { ev.stopPropagation(); return; }
+    if (ev.button !== 0) return;
+    ev.stopPropagation(); ev.preventDefault();
+
+    const now = performance.now();
+    const dbl = lastClick.id === el.id && now - lastClick.t < 400;
+    lastClick = { id: el.id, t: now };
+
+    if (dbl && el.type === 'text') { startEdit(p, el); return; }
+
+    if (!(sel && sel.id === el.id)) selectEl(p, el.id);
+    const nd = document.querySelector('.el[data-id="' + el.id + '"]') || d;
+    startDrag(ev, p, el, nd, 'move');
+  });
+}
+
+function selectEl(p, id) {
+  commitEdit();
+  sel = { p, id };
+  render();
+}
+function deselect() {
+  commitEdit();
+  if (sel) { sel = null; render(); }
+}
+
+function startDrag(ev, p, el, dom, mode, handle) {
+  const startX = ev.clientX, startY = ev.clientY;
+  const o = { x: el.x, y: el.y, w: el.w, h: el.h, r: el.r || 0 };
+  const cx0 = o.x + o.w / 2, cy0 = o.y + o.h / 2;
+  const rad = o.r * Math.PI / 180, cos = Math.cos(rad), sin = Math.sin(rad);
+  const pageDom = dom.closest('.page');
+  let moved = false;
+
+  function move(e) {
+    if (!moved && Math.hypot(e.clientX - startX, e.clientY - startY) > 3) {
+      moved = true;
+      pushHist();          // capture pre-drag state once
+    }
+    if (!moved) return;
+    const dx = (e.clientX - startX) / ppi, dy = (e.clientY - startY) / ppi;
+
+    if (mode === 'move') {
+      el.x = o.x + dx; el.y = o.y + dy;
+    } else if (mode === 'rotate') {
+      const rect = pageDom.getBoundingClientRect();
+      const cpx = rect.left + cx0 * ppi, cpy = rect.top + cy0 * ppi;
+      let ang = Math.atan2(e.clientY - cpy, e.clientX - cpx) * 180 / Math.PI + 90;
+      if (!e.shiftKey) {
+        const snap = Math.round(ang / 15) * 15;
+        if (Math.abs(ang - snap) < 5) ang = snap;
+      }
+      el.r = ((ang % 360) + 360) % 360;
+    } else { // resize
+      const sx = handle.includes('e') ? 1 : handle.includes('w') ? -1 : 0;
+      const sy = handle.includes('s') ? 1 : handle.includes('n') ? -1 : 0;
+      // pointer delta in the element's rotated frame
+      const dxl = dx * cos + dy * sin, dyl = -dx * sin + dy * cos;
+      let nw = sx ? Math.max(0.15, o.w + sx * dxl) : o.w;
+      let nh = sy ? Math.max(0.15, o.h + sy * dyl) : o.h;
+      if (el.type === 'image' && sx && sy && !e.altKey) {   // corners keep aspect (Alt = free)
+        const k = Math.max(nw / o.w, nh / o.h);
+        nw = Math.max(0.15, o.w * k); nh = Math.max(0.15, o.h * k);
+      }
+      // keep the opposite edge/corner fixed: shift center in local frame, rotate back
+      const dcx = sx * (nw - o.w) / 2, dcy = sy * (nh - o.h) / 2;
+      const cx = cx0 + dcx * cos - dcy * sin, cy = cy0 + dcx * sin + dcy * cos;
+      el.w = nw; el.h = nh; el.x = cx - nw / 2; el.y = cy - nh / 2;
+    }
+    applyGeom(dom, el);
+  }
+  function up() {
+    window.removeEventListener('pointermove', move);
+    if (moved) { render(); saveSoon(); }
+  }
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up, { once: true });
+}
+
+/* ---------- text editing ---------- */
+
+function startEdit(p, el) {
+  if (!(sel && sel.id === el.id)) { sel = { p, id: el.id }; render(); }
+  const d = document.querySelector('.el[data-id="' + el.id + '"]');
+  if (!d) return;
+  const c = d.querySelector('.content');
+  pushHist();
+  editing = el.id;
+  c.contentEditable = 'true';
+  c.focus();
+  const range = document.createRange();
+  range.selectNodeContents(c);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(range);
+  c.addEventListener('blur', () => {
+    if (editing !== el.id) return;
+    el.text = c.innerText;
+    editing = null;
+    render(); saveSoon();
+  }, { once: true });
+}
+function commitEdit() {
+  if (!editing) return;
+  const c = document.querySelector('.el[data-id="' + editing + '"] .content');
+  const el = findEl(editing);
+  if (c && el) el.text = c.innerText;
+  editing = null;
+  saveSoon();
+}
+
+/* ================= contextual toolbar ================= */
+
+function renderCtx() {
+  const bar = $('#ctxbar');
+  bar.innerHTML = '';
+  const el = sel && findEl(sel.id);
+  if (!el) {
+    const h = document.createElement('span');
+    h.className = 'hint';
+    h.textContent = 'Nothing selected — click an element to style it · double-click text to type · drag image files onto a page · Ctrl+V pastes a copied image';
+    bar.appendChild(h);
+    return;
+  }
+
+  const restyle = () => {
+    const d = document.querySelector('.el[data-id="' + el.id + '"]');
+    if (!d) return;
+    const c = d.querySelector('.content');
+    c.style.fontFamily = el.font;
+    c.style.fontSize = el.size * ppi / 72 + 'px';
+    c.style.color = el.color;
+    c.style.textAlign = el.align;
+    c.style.fontWeight = el.bold ? '700' : '400';
+    c.style.fontStyle = el.italic ? 'italic' : 'normal';
+    d.style.background = (el.bg && el.bg !== 'none') ? el.bg : 'transparent';
+    saveSoon();
+  };
+
+  if (el.type === 'text') {
+    const fsel = document.createElement('select');
+    FONTS.forEach(([name, stack]) => {
+      const o = document.createElement('option');
+      o.value = stack; o.textContent = name; o.style.fontFamily = stack;
+      if (stack === el.font) o.selected = true;
+      fsel.appendChild(o);
+    });
+    fsel.onchange = () => { pushHist(); el.font = fsel.value; restyle(); };
+
+    const size = document.createElement('input');
+    size.type = 'number'; size.min = 4; size.max = 96; size.value = el.size; size.title = 'Font size (pt)';
+    size.addEventListener('input', () => {
+      const v = +size.value;
+      if (v >= 4 && v <= 96) { pushHistGrouped('size'); el.size = v; restyle(); }
+    });
+
+    const color = document.createElement('input');
+    color.type = 'color'; color.value = el.color; color.title = 'Text color';
+    color.addEventListener('input', () => { pushHistGrouped('color'); el.color = color.value; restyle(); });
+
+    const b = document.createElement('button');
+    b.className = 'tbtn' + (el.bold ? ' on' : ''); b.innerHTML = '<b>B</b>';
+    b.onclick = () => { pushHist(); el.bold = !el.bold; b.classList.toggle('on', el.bold); restyle(); };
+    const i = document.createElement('button');
+    i.className = 'tbtn' + (el.italic ? ' on' : ''); i.innerHTML = '<i>I</i>';
+    i.onclick = () => { pushHist(); el.italic = !el.italic; i.classList.toggle('on', el.italic); restyle(); };
+
+    const alignGroup = div('tgroup');
+    [['left','⇤'],['center','⇹'],['right','⇥']].forEach(([a, glyph]) => {
+      const ab = document.createElement('button');
+      ab.className = 'tbtn' + (el.align === a ? ' on' : ''); ab.textContent = glyph; ab.title = 'Align ' + a;
+      ab.onclick = () => {
+        pushHist(); el.align = a;
+        alignGroup.querySelectorAll('.tbtn').forEach(x => x.classList.remove('on'));
+        ab.classList.add('on'); restyle();
+      };
+      alignGroup.appendChild(ab);
+    });
+
+    const bgl = document.createElement('span'); bgl.className = 'tlabel'; bgl.textContent = 'box';
+    const bgc = document.createElement('input');
+    bgc.type = 'color'; bgc.value = el.bg === 'none' ? '#ffffff' : el.bg; bgc.title = 'Text box background';
+    bgc.addEventListener('input', () => { pushHistGrouped('elbg'); el.bg = bgc.value; restyle(); });
+    const bgn = document.createElement('button');
+    bgn.className = 'tbtn'; bgn.textContent = '∅'; bgn.title = 'No background';
+    bgn.onclick = () => { pushHist(); el.bg = 'none'; restyle(); };
+
+    bar.append(fsel, size, color, sep(), b, i, sep(), alignGroup, sep(), bgl, bgc, bgn, sep());
+  } else {
+    const l = document.createElement('span'); l.className = 'tlabel';
+    l.textContent = 'Image — corner handles keep proportions (hold Alt to stretch)';
+    bar.append(l, sep());
+  }
+
+  // common controls
+  const up = mk('⬆ front', 'Bring forward', () => reorder(1));
+  const dn = mk('⬇ back', 'Send backward', () => reorder(-1));
+  const dup = mk('⧉ duplicate', 'Ctrl+D', duplicateSel);
+  const cps = document.createElement('select');
+  cps.title = 'Copy this element onto another page (or Ctrl+C, then Ctrl+V over the target page)';
+  cps.add(new Option('copy to…', '', true, true));
+  cps.options[0].disabled = true;
+  LABELS.forEach((l, i) => cps.add(new Option('page ' + l, i)));
+  cps.onchange = () => pasteEl(JSON.stringify(el), +cps.value);
+  const del = mk('🗑 delete', 'Delete key', deleteSel);
+  del.style.color = '#b3301c';
+  bar.append(up, dn, dup, cps, del);
+
+  function mk(label, title, fn) {
+    const btn = document.createElement('button');
+    btn.className = 'tbtn'; btn.textContent = label; btn.title = title; btn.onclick = fn;
+    return btn;
+  }
+  function sep() { return div('tsep'); }
+}
+
+function reorder(dir) {
+  if (!sel) return;
+  const els = state.pages[sel.p].els;
+  const idx = els.findIndex(e => e.id === sel.id);
+  const j = idx + dir;
+  if (idx < 0 || j < 0 || j >= els.length) return;
+  pushHist();
+  [els[idx], els[j]] = [els[j], els[idx]];
+  render(); saveSoon();
+}
+function duplicateSel() {
+  if (!sel) return;
+  const el = findEl(sel.id);
+  if (!el) return;
+  pushHist();
+  const copy = JSON.parse(JSON.stringify(el));
+  copy.id = nid(); copy.x += 0.15; copy.y += 0.15;
+  state.pages[sel.p].els.push(copy);
+  sel = { p: sel.p, id: copy.id };
+  render(); saveSoon();
+}
+function deleteSel() {
+  if (!sel) return;
+  pushHist();
+  const els = state.pages[sel.p].els;
+  const idx = els.findIndex(e => e.id === sel.id);
+  if (idx >= 0) els.splice(idx, 1);
+  sel = null;
+  render(); saveSoon();
+}
+
+/* ---------- copy / paste across pages ---------- */
+
+function copySel() {
+  const el = sel && findEl(sel.id);
+  if (!el) return;
+  clip = JSON.stringify(el);
+  // also stamp the OS clipboard so Ctrl+V priority resolves naturally
+  // (and copying works across Zine Studio tabs)
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText('zine-el:' + clip).catch(() => {});
+  }
+  toast('Copied — hover the destination page and press Ctrl+V');
+}
+
+function pasteEl(json, p) {
+  let el;
+  try { el = JSON.parse(json); } catch (e) { return; }
+  if (!el || !el.type) return;
+  if (p == null) p = hoverPage != null ? hoverPage : (sel ? sel.p : 0);
+  pushHist();
+  el.id = nid();
+  const els = state.pages[p].els;
+  while (els.some(x => Math.abs(x.x - el.x) < 0.01 && Math.abs(x.y - el.y) < 0.01)) {
+    el.x += 0.15; el.y += 0.15;
+  }
+  el.x = Math.min(el.x, PW - 0.2);
+  el.y = Math.min(el.y, PH - 0.2);
+  els.push(el);
+  sel = { p, id: el.id };
+  render(); saveSoon();
+  toast('Pasted onto page ' + (p + 1));
+}
+
+/* ================= adding content ================= */
+
+function addText(p) {
+  pushHist();
+  const n = state.pages[p].els.length;
+  const el = {
+    id: nid(), type: 'text', text: 'Double-click to edit',
+    x: 0.25 + (n % 4) * 0.1, y: 0.4 + (n % 4) * 0.25, w: 2.25, h: 0.5, r: 0,
+    font: FONTS[0][1], size: 14, color: '#232323', align: 'left', bold: false, italic: false, bg: 'none'
+  };
+  state.pages[p].els.push(el);
+  sel = { p, id: el.id };
+  render(); saveSoon();
+}
+
+let imgTarget = 0, imgAt = null;
+
+function processImage(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = reject;
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const MAX = 1600;
+        const k = Math.min(1, MAX / Math.max(img.width, img.height));
+        if (k < 1 || file.size > 400000) {
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          const type = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          resolve({ src: cv.toDataURL(type, 0.85), w: cv.width, h: cv.height });
+        } else {
+          resolve({ src: fr.result, w: img.width, h: img.height });
+        }
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+async function addImages(p, files, at) {
+  const list = [...files].filter(f => f.type.startsWith('image/'));
+  if (!list.length) return;
+  pushHist();
+  let lastId = null;
+  for (const f of list) {
+    try {
+      const { src, w, h } = await processImage(f);
+      let win = w / 96, hin = h / 96;                      // assume 96 dpi
+      const s = Math.min(2.4 / win, 2.4 / hin, 1);
+      win = Math.max(0.3, win * s); hin = Math.max(0.3, hin * s);
+      let x, y;
+      if (at) { x = at.x - win / 2; y = at.y - hin / 2; }
+      else { x = (PW - win) / 2; y = (PH - hin) / 2; }
+      x = Math.min(Math.max(x, -win / 2), PW - win / 2);
+      y = Math.min(Math.max(y, -hin / 2), PH - hin / 2);
+      const el = { id: nid(), type: 'image', src, x, y, w: win, h: hin, r: 0 };
+      state.pages[p].els.push(el);
+      lastId = el.id;
+    } catch (e) {
+      toast('Could not read image: ' + f.name);
+    }
+  }
+  if (lastId) sel = { p, id: lastId };
+  render(); saveSoon();
+}
+
+/* ================= the printed sheet ================= */
+
+function buildSheet() {
+  const s = $('#sheet');
+  s.innerHTML = '';
+  const u = v => v + 'in', fu = pt => pt + 'pt';
+
+  const place = (pageNum, col, row, flip) => {
+    const panel = div('panel' + (flip ? ' flip' : ''));
+    panel.style.left = col * PW + 'in';
+    panel.style.top = row * PH + 'in';
+    const pg = state.pages[pageNum - 1];
+    panel.style.background = pg.bg;
+    pg.els.forEach(el => panel.appendChild(elDom(el, u, fu)));
+    s.appendChild(panel);
+  };
+  SHEET_TOP.forEach((n, c) => place(n, c, 0, true));
+  SHEET_BOT.forEach((n, c) => place(n, c, 1, false));
+
+  if (state.guides) {
+    const mark = (styles) => {
+      const g = div('guide');
+      Object.assign(g.style, styles);
+      s.appendChild(g);
+      return g;
+    };
+    // fold tick marks at the sheet edges (they land on creases, invisible once folded)
+    [2.75, 5.5, 8.25].forEach(x => {
+      mark({ left: x + 'in', top: 0, width: 0, height: '0.15in', borderLeft: '1px dashed #b5b5b5' });
+      mark({ left: x + 'in', bottom: 0, width: 0, height: '0.15in', borderLeft: '1px dashed #b5b5b5' });
+    });
+    mark({ left: 0, top: '4.25in', width: '0.15in', height: 0, borderTop: '1px dashed #b5b5b5' });
+    mark({ right: 0, top: '4.25in', width: '0.15in', height: 0, borderTop: '1px dashed #b5b5b5' });
+    // the cut line: center crease, middle two panels only
+    mark({ left: '2.75in', top: '4.25in', width: '5.5in', height: 0, borderTop: '1.5px solid #999' });
+    const sc = mark({ left: '2.82in', top: '4.12in', fontSize: '11pt', color: '#999' });
+    sc.textContent = '✂';
+  }
+}
+
+function showPreview() {
+  buildSheet();
+  const wrap = $('#sheet-wrap');
+  const scale = Math.min((innerWidth - 60) / (11 * 96), (innerHeight - 140) / (8.5 * 96), 1);
+  $('#sheet').style.zoom = scale;
+  wrap.classList.add('show');
+}
+function hidePreview() {
+  $('#sheet-wrap').classList.remove('show');
+}
+function doPrint() {
+  commitEdit();
+  buildSheet();
+  $('#sheet').style.zoom = 1;
+  window.print();
+}
+
+/* ================= flip-through book preview ================= */
+// The booklet has 4 leaves; leaf i shows page 2i+1 on its front (right side)
+// and page 2i+2 on its back (left side after turning).
+
+let flipPos = 0;   // how many leaves are turned (0 = cover, 4 = back cover)
+
+function buildFlip() {
+  const book = $('#book');
+  book.innerHTML = '';
+  const fp = Math.min((innerHeight - 200) / PH, (innerWidth - 120) / (2 * PW), 150);
+  book.style.width = 2 * PW * fp + 'px';
+  book.style.height = PH * fp + 'px';
+  const u = v => v * fp + 'px', fu = pt => pt * fp / 72 + 'px';
+
+  for (let i = 0; i < 4; i++) {
+    const leaf = div('leaf');
+    leaf.dataset.i = i;
+    const front = div('face front'), back = div('face back');
+    [[front, 2 * i], [back, 2 * i + 1]].forEach(([face, pi]) => {
+      const pg = state.pages[pi];
+      face.style.background = pg.bg;
+      pg.els.forEach(el => face.appendChild(elDom(el, u, fu)));
+      face.appendChild(div('sheen'));
+    });
+    leaf.append(front, back);
+    leaf.addEventListener('click', () => {
+      flipTo(leaf.classList.contains('flipped') ? i : i + 1);
+    });
+    book.appendChild(leaf);
+  }
+}
+
+function flipTo(n) {
+  flipPos = Math.max(0, Math.min(4, n));
+  document.querySelectorAll('#book .leaf').forEach(leaf => {
+    const i = +leaf.dataset.i;
+    const flipped = i < flipPos;
+    const was = leaf.classList.contains('flipped');
+    leaf.classList.toggle('flipped', flipped);
+    if (was !== flipped) {
+      leaf.style.zIndex = 10;   // ride above the stacks while animating
+      leaf.addEventListener('transitionend', () => {
+        leaf.style.zIndex = flipped ? i + 1 : 4 - i;
+      }, { once: true });
+    } else {
+      leaf.style.zIndex = flipped ? i + 1 : 4 - i;
+    }
+  });
+  $('#flip-label').textContent =
+    flipPos === 0 ? 'front cover' :
+    flipPos === 4 ? 'back cover' :
+    'pages ' + (2 * flipPos) + '–' + (2 * flipPos + 1);
+}
+
+function showFlip() {
+  commitEdit();
+  buildFlip();
+  $('#flip-wrap').classList.add('show');
+  flipTo(0);
+}
+function hideFlip() {
+  $('#flip-wrap').classList.remove('show');
+}
+
+/* ================= file open/save ================= */
+
+function exportFile() {
+  commitEdit();
+  const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'my-zine.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importFile(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    try {
+      const doc = JSON.parse(fr.result);
+      if (!doc.pages || doc.pages.length !== 8) throw new Error('bad format');
+      pushHist();
+      state = doc; sel = null;
+      render(); saveSoon();
+      toast('Zine loaded ✔');
+    } catch (e) {
+      toast('That file doesn’t look like a Zine Studio file.');
+    }
+  };
+  fr.readAsText(file);
+}
+
+/* ================= global events ================= */
+
+document.addEventListener('keydown', e => {
+  if (editing) {
+    if (e.key === 'Escape') commitEdit() || render();
+    return;
+  }
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return;
+
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+  if (mod && e.key.toLowerCase() === 'd' && sel) { e.preventDefault(); duplicateSel(); return; }
+  if (mod && e.key.toLowerCase() === 'c' && sel) { e.preventDefault(); copySel(); return; }
+  if (mod && e.key.toLowerCase() === 'x' && sel) { e.preventDefault(); copySel(); deleteSel(); return; }
+  if ($('#flip-wrap').classList.contains('show')) {
+    if (e.key === 'Escape') hideFlip();
+    else if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); flipTo(flipPos + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); flipTo(flipPos - 1); }
+    return;
+  }
+  if (e.key === 'Escape') {
+    if ($('#sheet-wrap').classList.contains('show')) { hidePreview(); return; }
+    deselect(); return;
+  }
+  if (!sel) return;
+  const el = findEl(sel.id);
+  if (!el) return;
+  const step = e.shiftKey ? 0.1 : 0.02;
+  const nudge = (dx, dy) => {
+    e.preventDefault();
+    pushHistGrouped('nudge');
+    el.x += dx; el.y += dy;
+    const d = document.querySelector('.el[data-id="' + el.id + '"]');
+    if (d) applyGeom(d, el);
+    saveSoon();
+  };
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSel(); }
+  else if (e.key === 'ArrowLeft') nudge(-step, 0);
+  else if (e.key === 'ArrowRight') nudge(step, 0);
+  else if (e.key === 'ArrowUp') nudge(0, -step);
+  else if (e.key === 'ArrowDown') nudge(0, step);
+});
+
+document.addEventListener('paste', e => {
+  if (editing) return;
+  const t = e.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  const txt = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+  if (txt && txt.startsWith('zine-el:')) { pasteEl(txt.slice(8)); return; }
+  const files = [...(e.clipboardData?.items || [])]
+    .filter(i => i.type.startsWith('image/'))
+    .map(i => i.getAsFile())
+    .filter(Boolean);
+  if (files.length) { addImages(hoverPage != null ? hoverPage : (sel ? sel.p : 0), files); return; }
+  if (clip) pasteEl(clip);   // fallback if the OS clipboard write was blocked
+});
+
+$('#imgfile').addEventListener('change', e => {
+  addImages(imgTarget, e.target.files, imgAt);
+  e.target.value = '';
+});
+$('#jsonfile').addEventListener('change', e => {
+  if (e.target.files[0]) importFile(e.target.files[0]);
+  e.target.value = '';
+});
+
+$('#b-new').onclick = () => {
+  if (!confirm('Start a new zine? Your current zine will be replaced (you can undo, or Save file first).')) return;
+  pushHist();
+  state = newDoc(); sel = null;
+  render(); saveSoon();
+};
+$('#b-import').onclick = () => $('#jsonfile').click();
+$('#b-export').onclick = exportFile;
+$('#b-undo').onclick = undo;
+$('#b-redo').onclick = redo;
+$('#b-preview').onclick = () => { commitEdit(); showPreview(); };
+$('#b-flip').onclick = showFlip;
+$('#flip-close').onclick = hideFlip;
+$('#flip-next').onclick = () => flipTo(flipPos + 1);
+$('#flip-prev').onclick = () => flipTo(flipPos - 1);
+$('#flip-wrap').addEventListener('pointerdown', e => { if (e.target === e.currentTarget) hideFlip(); });
+$('#b-print').onclick = doPrint;
+$('#b-print2').onclick = doPrint;
+$('#b-close-preview').onclick = hidePreview;
+$('#sheet-wrap').addEventListener('pointerdown', e => { if (e.target === e.currentTarget) hidePreview(); });
+$('#b-help').onclick = () => $('#help').showModal();
+$('#b-close-help').onclick = () => $('#help').close();
+
+$('#zoom').value = ppi;
+$('#zoom').addEventListener('input', e => {
+  commitEdit();
+  ppi = +e.target.value;
+  localStorage.setItem('zine-studio-zoom', ppi);
+  render();
+});
+$('#guides').addEventListener('change', e => {
+  state.guides = e.target.checked;
+  saveSoon();
+});
+
+window.addEventListener('beforeprint', buildSheet);
+
+/* ================= boot ================= */
+
+try {
+  const saved = localStorage.getItem(STORE_KEY);
+  state = saved ? JSON.parse(saved) : null;
+  if (!state || !state.pages || state.pages.length !== 8) state = null;
+} catch (e) { state = null; }
+const firstRun = !state;
+if (!state) state = newDoc();
+render();
+if (firstRun) $('#help').showModal();
+</script>
+</body>
+</html>
