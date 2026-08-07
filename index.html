@@ -267,6 +267,7 @@
     <li><strong>Double-click text to edit it.</strong> Fonts, size, color and alignment appear in the toolbar when selected.</li>
     <li>Work is autosaved in your browser. Use <em>Save file</em> to keep a portable copy.</li>
     <li><strong>📖 Flip through</strong> shows an animated preview of the finished booklet — click pages to turn them.</li>
+    <li>Every page starts with a small <strong>page number</strong> at the bottom — it's an ordinary text element, so click it to restyle, move, or delete it.</li>
   </ul>
   <h3>Printing</h3>
   <p>Print at <strong>100% scale</strong> (not "fit to page"), single-sided, with margins set to <em>None</em> or <em>Minimum</em>. Most printers can't print to the very edge, so keep important content a little away from page edges.</p>
@@ -394,6 +395,22 @@ function toast(msg, ms = 2600) {
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), ms);
 }
 
+function pageNumEl(i) {
+  return {
+    id: nid(), type: 'text', text: String(i + 1),
+    x: 0.25, y: PH - 0.35, w: PW - 0.5, h: 0.25, r: 0,
+    font: FONTS[0][1], size: 8, color: '#888888', align: 'center',
+    bold: false, italic: false, bg: 'none'
+  };
+}
+// add default page numbers once per document; they're ordinary text
+// elements afterwards, so deleting them sticks
+function ensureNumbers(doc) {
+  if (doc.numbered) return;
+  doc.pages.forEach((pg, i) => pg.els.push(pageNumEl(i)));
+  doc.numbered = true;
+}
+
 function newDoc() {
   const pages = Array.from({ length: 8 }, () => ({ bg: '#ffffff', els: [] }));
   pages[0].els.push({
@@ -404,7 +421,9 @@ function newDoc() {
     id: nid(), type: 'text', text: 'a tiny how-to booklet', x: 0.35, y: 2.2, w: 2.05, h: 0.35, r: 0,
     font: FONTS[2][1], size: 10, color: '#666666', align: 'center', bold: false, italic: false, bg: 'none'
   });
-  return { guides: true, pages };
+  const doc = { guides: true, pages };
+  ensureNumbers(doc);
+  return doc;
 }
 
 /* ================= history & persistence ================= */
@@ -1054,6 +1073,7 @@ function importFile(file) {
       const doc = JSON.parse(fr.result);
       if (!doc.pages || doc.pages.length !== 8) throw new Error('bad format');
       pushHist();
+      ensureNumbers(doc);
       state = doc; sel = null;
       render(); saveSoon();
       toast('Zine loaded ✔');
@@ -1178,6 +1198,11 @@ try {
 } catch (e) { state = null; }
 const firstRun = !state;
 if (!state) state = newDoc();
+else if (!state.numbered) {
+  ensureNumbers(state);
+  saveSoon();
+  toast('Added page numbers to your pages — they’re normal text elements: restyle or delete any you don’t want.', 6000);
+}
 render();
 if (firstRun) $('#help').showModal();
 </script>
