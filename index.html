@@ -878,13 +878,13 @@ function buildSheet() {
       s.appendChild(g);
       return g;
     };
-    // fold tick marks at the sheet edges (they land on creases, invisible once folded)
+    // thin full-length fold lines — they land exactly on the creases,
+    // so they disappear into the folds once the zine is assembled
     [2.75, 5.5, 8.25].forEach(x => {
-      mark({ left: x + 'in', top: 0, width: 0, height: '0.15in', borderLeft: '1px dashed #b5b5b5' });
-      mark({ left: x + 'in', bottom: 0, width: 0, height: '0.15in', borderLeft: '1px dashed #b5b5b5' });
+      mark({ left: x + 'in', top: 0, width: 0, height: '8.5in', borderLeft: '1px dashed #cfcfcf' });
     });
-    mark({ left: 0, top: '4.25in', width: '0.15in', height: 0, borderTop: '1px dashed #b5b5b5' });
-    mark({ right: 0, top: '4.25in', width: '0.15in', height: 0, borderTop: '1px dashed #b5b5b5' });
+    mark({ left: 0, top: '4.25in', width: '2.75in', height: 0, borderTop: '1px dashed #cfcfcf' });
+    mark({ left: '8.25in', top: '4.25in', width: '2.75in', height: 0, borderTop: '1px dashed #cfcfcf' });
     // the cut line: center crease, middle two panels only
     mark({ left: '2.75in', top: '4.25in', width: '5.5in', height: 0, borderTop: '1.5px solid #999' });
     const sc = mark({ left: '2.82in', top: '4.12in', fontSize: '11pt', color: '#999' });
