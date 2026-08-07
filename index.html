@@ -174,7 +174,7 @@
   <span class="spacer"></span>
   <button class="btn" id="b-flip">📖 Flip through</button>
   <button class="btn" id="b-preview">Preview sheet</button>
-  <button class="btn primary" id="b-print">🖨 Print</button>
+  <button class="btn primary" id="b-print" title="Choose 'Save as PDF' as the destination to get a PDF">🖨 Print / PDF</button>
   <button class="btn" id="b-help">?</button>
 </header>
 
@@ -196,7 +196,7 @@
   <div id="sheet-note">
     <strong>Print preview</strong> — one landscape US-letter sheet, single-sided. Fold + one cut = your zine.
     <span class="spacer"></span>
-    <button class="btn primary" id="b-print2">🖨 Print</button>
+    <button class="btn primary" id="b-print2" title="Choose 'Save as PDF' as the destination to get a PDF">🖨 Print / PDF</button>
     <button class="btn" id="b-close-preview">✕ Close</button>
   </div>
   <div id="sheet"></div>
@@ -205,6 +205,57 @@
 <dialog id="help">
   <h2>✂️ Zine Studio</h2>
   <p>Make an 8-page mini-zine from a single sheet of 8.5×11 paper — printed on <strong>one side only</strong>, folded, with one small cut. Each page is 2.75″ × 4.25″.</p>
+
+  <svg viewBox="0 0 600 236" role="img" aria-label="How the pages are arranged on the sheet, and the finished booklet"
+       style="width:100%;height:auto;margin:4px 0 10px;font-family:inherit">
+    <!-- ===== the printed sheet (landscape 11 × 8.5) ===== -->
+    <rect x="10" y="10" width="264" height="204" fill="#fffdf8" stroke="#232323" stroke-width="2"/>
+    <!-- cover + back-cover panel tints -->
+    <rect x="208" y="112" width="66" height="102" fill="#fdeae4"/>
+    <rect x="142" y="112" width="66" height="102" fill="#f2efe6"/>
+    <!-- fold creases -->
+    <line x1="76"  y1="10"  x2="76"  y2="214" stroke="#c5c0b2" stroke-dasharray="4 4"/>
+    <line x1="142" y1="10"  x2="142" y2="214" stroke="#c5c0b2" stroke-dasharray="4 4"/>
+    <line x1="208" y1="10"  x2="208" y2="214" stroke="#c5c0b2" stroke-dasharray="4 4"/>
+    <line x1="10"  y1="112" x2="76"  y2="112" stroke="#c5c0b2" stroke-dasharray="4 4"/>
+    <line x1="208" y1="112" x2="274" y2="112" stroke="#c5c0b2" stroke-dasharray="4 4"/>
+    <!-- the cut -->
+    <line x1="76" y1="112" x2="208" y2="112" stroke="#e5533d" stroke-width="2.5"/>
+    <text x="84" y="107" font-size="13" fill="#e5533d">✂</text>
+    <!-- top row: pages 5 4 3 2, printed upside-down -->
+    <g font-size="34" font-weight="700" fill="#232323" text-anchor="middle">
+      <text x="43"  y="61" transform="rotate(180 43 61)"  dominant-baseline="central">5</text>
+      <text x="109" y="61" transform="rotate(180 109 61)" dominant-baseline="central">4</text>
+      <text x="175" y="61" transform="rotate(180 175 61)" dominant-baseline="central">3</text>
+      <text x="241" y="61" transform="rotate(180 241 61)" dominant-baseline="central">2</text>
+      <!-- bottom row: pages 6 7 8 1, right-side up -->
+      <text x="43"  y="163" dominant-baseline="central">6</text>
+      <text x="109" y="163" dominant-baseline="central">7</text>
+      <text x="175" y="163" dominant-baseline="central">8</text>
+      <text x="241" y="163" dominant-baseline="central">1</text>
+    </g>
+    <g font-size="9" fill="#8a8272" text-anchor="middle">
+      <text x="241" y="200">front cover</text>
+      <text x="175" y="200">back cover</text>
+      <text x="142" y="30" transform="rotate(180 142 27)">⌃ these print upside-down ⌃</text>
+      <text x="142" y="228" font-size="10">one landscape sheet · printed on one side only</text>
+    </g>
+    <!-- ===== arrow ===== -->
+    <g stroke="#232323" stroke-width="2" fill="#232323">
+      <line x1="296" y1="112" x2="390" y2="112"/>
+      <polygon points="390,105 404,112 390,119" stroke="none"/>
+    </g>
+    <text x="350" y="96" font-size="11" fill="#232323" text-anchor="middle" font-weight="600">fold + one cut</text>
+    <!-- ===== the finished booklet ===== -->
+    <rect x="446" y="52" width="92" height="142" fill="#fff" stroke="#b5ae9c" transform="rotate(2 492 123)"/>
+    <rect x="441" y="47" width="92" height="142" fill="#fff" stroke="#8f8875" transform="rotate(-1.5 487 118)"/>
+    <rect x="436" y="42" width="92" height="142" fill="#fdeae4" stroke="#232323" stroke-width="2"/>
+    <!-- spine crease hint on the left edge -->
+    <line x1="440" y1="46" x2="440" y2="180" stroke="#e0b7ab" stroke-width="2"/>
+    <text x="482" y="112" font-size="46" font-weight="700" fill="#232323" text-anchor="middle" dominant-baseline="central">1</text>
+    <text x="482" y="150" font-size="10" fill="#8a8272" text-anchor="middle">front cover</text>
+    <text x="487" y="228" font-size="10" fill="#8a8272" text-anchor="middle">your 8-page booklet · 2¾″ × 4¼″</text>
+  </svg>
   <h3>Editing</h3>
   <ul style="padding-left:20px;margin:6px 0">
     <li><strong>+ text / + image</strong> buttons above each page add elements; you can also <strong>drag &amp; drop</strong> image files onto a page, or paste a copied image with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</li>
@@ -215,6 +266,7 @@
   </ul>
   <h3>Printing</h3>
   <p>Print at <strong>100% scale</strong> (not "fit to page"), single-sided, with margins set to <em>None</em> or <em>Minimum</em>. Most printers can't print to the very edge, so keep important content a little away from page edges.</p>
+  <p><strong>Want a PDF?</strong> Use the same 🖨 button and choose <em>Save as PDF</em> as the destination in the print dialog — you'll get a perfect vector PDF of the sheet.</p>
   <h3>Folding (after printing)</h3>
   <ol>
     <li>Fold in half — long edge to long edge ("hot-dog"). Unfold.</li>
