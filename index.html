@@ -1258,7 +1258,7 @@ try {
   if (!state || !state.pages || state.pages.length !== 8) state = null;
 } catch (e) { state = null; }
 const firstRun = !state;
-if (!state) state = newDoc();
+if (!state) state = newDoc('bread');  // first visit: show the bread how-to as a worked example
 else if (!state.numbered) {
   ensureNumbers(state);
   saveSoon();
